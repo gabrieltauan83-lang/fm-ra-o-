@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#36533b">
+<meta name="description" content="Calculadora de formulação de ração para bovinos - Fazenda Manjedoura">
+
+<!-- Configuração PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ração Manjedoura">
+<link rel="apple-touch-icon" href="./icon-192.png">
+
+<title>Calculadora de Ração | Fazenda Manjedoura</title>
+<style>
+:root{--green:#36533b;--green2:#527b50;--bg:#f3f5f1;--card:#fff;--ink:#202820;--muted:#667166;--line:#dce3da;--gold:#c99b43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:linear-gradient(120deg,#29432f,#527b50);color:white;padding:24px 16px 22px}
+.wrap{max-width:1050px;margin:auto;padding:0 14px}
+.header-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:25px;margin:0 0 5px}header p{margin:0;color:#e4eee2}
+#btnInstall{display:none;background:#c99b43;color:#1d261d;border:0;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer}
+main{padding:18px 0 40px}.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #2030200a}
+h2{font-size:18px;margin:0 0 13px;color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+input{width:100%;min-width:0;border:1px solid #cbd5ca;border-radius:8px;padding:10px;background:#fff;color:var(--ink);font:inherit}
+input:focus{outline:2px solid #a8c7a6;border-color:var(--green2)}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:720px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}th{color:var(--muted);font-size:11px;text-transform:uppercase;white-space:nowrap}td input{padding:8px 6px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{border:0;border-radius:9px;padding:10px 14px;font:600 14px system-ui;cursor:pointer}
+.primary{background:var(--green);color:#fff}.secondary{background:#e8eee6;color:var(--green)}.danger{background:#f8e9e7;color:#9a3e32}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.metric{background:#f5f8f3;border:1px solid var(--line);border-radius:10px;padding:12px}
+.metric span{display:block;font-size:11px;color:var(--muted);font-weight:700}.metric strong{display:block;font-size:20px;margin-top:4px;color:var(--green);overflow-wrap:anywhere}
+.note{font-size:12px;color:var(--muted);line-height:1.5}.status{font-size:13px;color:var(--green);min-height:18px;margin-top:8px}
+.summarytable{min-width:0}.summarytable td:last-child,.summarytable th:last-child{text-align:right}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:8px 14px 25px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{padding:20px}.metrics{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:430px){h1{font-size:22px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric strong{font-size:18px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap header-top">
+    <div>
+      <h1>Fazenda Manjedoura</h1>
+      <p>Calculadora de formulação de ração para bovinos</p>
+    </div>
+    <button id="btnInstall" type="button">📲 Instalar App</button>
+  </div>
+</header>
+<main class="wrap">
+<section class="panel">
+<h2>1. Dados da mistura</h2>
+<div class="grid">
+<div class="field"><label for="batch">Tamanho do lote (kg)</label><input id="batch" type="number" min="0" step="0.1" value="100"></div>
+<div class="field"><label for="animals">Número de animais</label><input id="animals" type="number" min="1" step="1" value="1"></div>
+<div class="field"><label for="daily">Ração por animal/dia (kg natural)</label><input id="daily" type="number" min="0" step="0.1" value="5"></div>
+<div class="field"><label for="days">Dias de trato desejados</label><input id="days" type="number" min="0" step="1" value="1"></div>
+</div>
+<p class="note">Informe quanto de cada ingrediente entra no lote. A soma dos ingredientes define o peso real da mistura; o campo “tamanho do lote” é uma referência para comparação.</p>
+</section>
+<section class="panel">
+<h2>2. Ingredientes e composição nutricional</h2>
+<div class="tablewrap"><table id="ingredients">
+<thead><tr><th>Ingrediente</th><th>Quantidade (kg)</th><th>MS (%)</th><th>PB (% da MS)</th><th>NDT (% da MS)</th><th>Preço (R$/kg)</th><th></th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+<div class="actions">
+<button class="secondary" id="add">+ Adicionar ingrediente</button>
+<button class="secondary" id="reset">Restaurar exemplo</button>
+<button class="primary" id="save">Salvar dados neste aparelho</button>
+</div><div class="status" id="status" aria-live="polite"></div>
+<p class="note">Os ingredientes iniciais são apenas exemplos com valores aproximados para demonstrar a calculadora. Substitua MS, PB, NDT e preço pelos dados reais dos seus alimentos, de preferência análise laboratorial e informação técnica confiável. PB e NDT são informados sobre a matéria seca (MS).</p>
+</section>
+
+<section class="panel">
+<h2>3. Referência BR-CORTE 2023 — animal e exigências</h2>
+<p class="note">Cadastre o perfil do bovino e transcreva da planilha oficial BR-CORTE 2023 as exigências correspondentes. O aplicativo compara o fornecimento calculado da dieta com esses valores; não inventa exigências nem substitui as equações oficiais.</p>
+<div class="grid">
+<div class="field"><label for="animalType">Categoria / grupo genético</label><input id="animalType" type="text" value="Zebuíno — macho não castrado" placeholder="Ex.: zebuíno, cruzado de corte"></div>
+<div class="field"><label for="systemType">Sistema de produção</label><input id="systemType" type="text" value="Confinamento" placeholder="Confinamento ou pasto"></div>
+<div class="field"><label for="liveWeight">Peso corporal (kg)</label><input id="liveWeight" type="number" min="0" step="1" value="400"></div>
+<div class="field"><label for="targetGain">Ganho médio diário desejado (kg/dia)</label><input id="targetGain" type="number" min="0" step="0.1" value="1"></div>
+<div class="field"><label for="reqDMI">Exigência de CMS (kg MS/dia)</label><input id="reqDMI" type="number" min="0" step="0.01" placeholder="Preencher pela tabela BR-CORTE"></div>
+<div class="field"><label for="reqCP">Exigência de PB (kg/dia)</label><input id="reqCP" type="number" min="0" step="0.01" placeholder="Preencher pela tabela BR-CORTE"></div>
+<div class="field"><label for="reqTDN">Exigência de NDT (kg/dia)</label><input id="reqTDN" type="number" min="0" step="0.01" placeholder="Preencher pela tabela BR-CORTE"></div>
+<div class="field"><label for="refSource">Tabela / referência consultada</label><input id="refSource" type="text" value="BR-CORTE 2023 — Capítulo 17" placeholder="Tabela, página ou planilha"></div>
+</div>
+<div class="actions"><button class="secondary" id="clearReq">Limpar exigências</button><button class="secondary" id="openBrcorte">Abrir BR-CORTE 2023 oficial</button></div>
+<div class="metrics" style="margin-top:12px">
+<div class="metric"><span>CMS FORNECIDO / EXIGIDO</span><strong id="cmpDM">—</strong></div>
+<div class="metric"><span>PB FORNECIDA / EXIGIDA</span><strong id="cmpCP">—</strong></div>
+<div class="metric"><span>NDT FORNECIDO / EXIGIDA</span><strong id="cmpTDN">—</strong></div>
+</div>
+<p class="note" id="comparisonNote">Informe a quantidade diária de ração e as exigências consultadas na referência oficial para comparar.</p>
+</section>
+
+<section class="panel">
+<h2>4. Resultado da formulação</h2>
+<div class="metrics">
+<div class="metric"><span>PESO DA MISTURA</span><strong id="rWeight">—</strong></div>
+<div class="metric"><span>MATÉRIA SECA</span><strong id="rDM">—</strong></div>
+<div class="metric"><span>PROTEÍNA BRUTA</span><strong id="rCP">—</strong></div>
+<div class="metric"><span>NDT</span><strong id="rTDN">—</strong></div>
+<div class="metric"><span>CUSTO DO LOTE</span><strong id="rCost">—</strong></div>
+<div class="metric"><span>CUSTO / KG NATURAL</span><strong id="rUnit">—</strong></div>
+</div>
+<div class="tablewrap" style="margin-top:14px"><table class="summarytable">
+<thead><tr><th>Indicador</th><th>Resultado</th></tr></thead>
+<tbody>
+<tr><td>Matéria seca total</td><td id="sDM">—</td></tr>
+<tr><td>PB total</td><td id="sCP">—</td></tr>
+<tr><td>PB da mistura (% MS)</td><td id="sCPPct">—</td></tr>
+<tr><td>NDT total</td><td id="sTDN">—</td></tr>
+<tr><td>NDT da mistura (% MS)</td><td id="sTDNPct">—</td></tr>
+<tr><td>Custo por kg de matéria seca</td><td id="sCostDM">—</td></tr>
+<tr><td>Animais atendidos pelos dias informados</td><td id="sAnimals">—</td></tr>
+<tr><td>Quantidade necessária para o trato informado</td><td id="sNeed">—</td></tr>
+</tbody></table></div>
+<p class="note" id="balanceNote"></p>
+</section>
+<section class="panel">
+<h2>5. Participação dos ingredientes</h2>
+<div class="tablewrap"><table class="summarytable">
+<thead><tr><th>Ingrediente</th><th>Quantidade (kg)</th><th>Participação (%)</th></tr></thead><tbody id="shares"></tbody>
+</table></div>
+<p class="note">Base de referência das exigências: BR-CORTE 2023, especialmente Capítulo 17 (tabelas por sistema, grupo genético e sexo). As exigências devem ser copiadas da tabela/planilha oficial correspondente ao animal. A comparação deste app é parcial e não representa formulação automática pelo modelo BR-CORTE. A calculadora faz o balanço matemático dos ingredientes cadastrados. Ela não substitui a formulação nutricional completa: exigências dependem de peso vivo, categoria, raça, ganho desejado, consumo de matéria seca, volumoso, adaptação, fibra efetiva, minerais e condições de manejo.</p>
+</section>
+</main>
+<footer>Fazenda Manjedoura • Ferramenta de apoio à formulação • Referência técnica: BR-CORTE 2023</footer>
+<script>
+const examples=[
+{name:"Silagem de capim",kg:30,ms:25,pb:7,ndt:55,price:0.20},
+{name:"Xerém / milho moído",kg:50,ms:88,pb:9,ndt:88,price:1.50},
+{name:"Torta de algodão",kg:20,ms:90,pb:28,ndt:70,price:1.30}
+];
+const $=id=>document.getElementById(id);
+function addRow(v={name:"Novo ingrediente",kg:0,ms:90,pb:0,ndt:0,price:0}){
+ const tr=document.createElement("tr");
+ const fields=[["name","text"],["kg","number"],["ms","number"],["pb","number"],["ndt","number"],["price","number"]];
+ fields.forEach(([key,type])=>{
+  const td=document.createElement("td"),inp=document.createElement("input");
+  inp.type=type;inp.value=v[key]??"";inp.dataset.key=key;
+  if(type==="number"){inp.min="0";inp.step="any"}
+  inp.addEventListener("input",()=>{calculate();if(typeof compareRequirements==="function")compareRequirements()});td.appendChild(inp);tr.appendChild(td);
+ });
+ const td=document.createElement("td"),btn=document.createElement("button");
+ btn.className="danger";btn.textContent="Excluir";btn.type="button";
+ btn.addEventListener("click",()=>{tr.remove();calculate()});td.appendChild(btn);tr.appendChild(td);
+ $("rows").appendChild(tr);
+}
+function getRows(){return [...$("rows").querySelectorAll("tr")].map(tr=>{
+ const o={};tr.querySelectorAll("input").forEach(i=>o[i.dataset.key]=i.type==="number"?(parseFloat(i.value)||0):i.value);return o;
+})}
+function num(v){return Number(v)||0}
+function br(v,d=2){return v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function money(v){return "R$ "+br(v)}
+function put(id,value){$(id).textContent=value}
+function calculate(){
+ const data=getRows();let weight=0,dm=0,cp=0,tdn=0,cost=0;
+ data.forEach(x=>{const q=Math.max(0,x.kg),m=Math.max(0,Math.min(100,x.ms))/100;weight+=q;dm+=q*m;cp+=q*m*Math.max(0,x.pb)/100;tdn+=q*m*Math.max(0,x.ndt)/100;cost+=q*Math.max(0,x.price)});
+ const cpPct=dm?cp/dm*100:0,tdnPct=dm?tdn/dm*100:0;
+ const animals=Math.max(0,num($("animals").value)),daily=Math.max(0,num($("daily").value)),days=Math.max(0,num($("days").value));
+ const need=animals*daily*days, servings=weight&&daily&&days?weight/(daily*days):0;
+ put("rWeight",br(weight)+" kg");put("rDM",br(dm)+" kg");put("rCP",br(cpPct)+"%");put("rTDN",br(tdnPct)+"%");
+ put("rCost",money(cost));put("rUnit",money(weight?cost/weight:0));
+ put("sDM",br(dm)+" kg");put("sCP",br(cp)+" kg");put("sCPPct",br(cpPct)+"% da MS");
+ put("sTDN",br(tdn)+" kg");put("sTDNPct",br(tdnPct)+"% da MS");
+ put("sCostDM",money(dm?cost/dm:0));put("sAnimals",br(servings,1)+" animal-dia (equivalente)");
+ put("sNeed",br(need)+" kg de ração natural");
+ $("balanceNote").textContent=weight?`A mistura tem ${br(weight)} kg. Para ${animals} animal(is), a ${br(daily)} kg/animal/dia durante ${br(days,0)} dia(s), serão necessários ${br(need)} kg. ${weight>=need?"A quantidade calculada é suficiente para esse trato.":"A quantidade calculada é inferior à necessidade informada."}`:"Adicione ingredientes e quantidades para calcular.";
+ $("shares").innerHTML="";
+ data.forEach(x=>{if(!x.name&&!x.kg)return;const tr=document.createElement("tr");[x.name,br(x.kg)+" kg",br(weight?x.kg/weight*100:0)+"%"].forEach(t=>{const td=document.createElement("td");td.textContent=t;tr.appendChild(td)});$("shares").appendChild(tr)});
+}
+function save(){const extra=["animalType","systemType","liveWeight","targetGain","reqDMI","reqCP","reqTDN","refSource"];const payload={rows:getRows(),batch:$("batch").value,animals:$("animals").value,daily:$("daily").value,days:$("days").value,extra:Object.fromEntries(extra.map(k=>[k,$(k).value]))};localStorage.setItem("fm-racao-v1",JSON.stringify(payload));put("status","Dados salvos neste aparelho.");}
+function load(){try{const p=JSON.parse(localStorage.getItem("fm-racao-v1"));if(!p)return false;$("rows").innerHTML="";(p.rows||[]).forEach(addRow);["batch","animals","daily","days"].forEach(k=>{if(p[k]!==undefined)$(k).value=p[k]});if(p.extra)Object.entries(p.extra).forEach(([k,v])=>{if($(k))$(k).value=v});return true}catch(e){return false}}
+$("add").addEventListener("click",()=>{addRow();calculate()});
+$("reset").addEventListener("click",()=>{$("rows").innerHTML="";examples.forEach(addRow);calculate();put("status","Exemplo restaurado. Ajuste os valores à sua realidade.")});
+$("save").addEventListener("click",save);
+["batch","animals","daily","days"].forEach(k=>$(k).addEventListener("input",calculate));
+
+function compareRequirements(){
+ const data=getRows();let w=0,dm=0,cp=0,tdn=0;
+ data.forEach(x=>{const q=Math.max(0,x.kg),m=Math.max(0,Math.min(100,x.ms))/100;w+=q;dm+=q*m;cp+=q*m*Math.max(0,x.pb)/100;tdn+=q*m*Math.max(0,x.ndt)/100});
+ const daily=Math.max(0,num($("daily").value));
+ const dmDay=w?dm/w*daily:0,cpDay=w?cp/w*daily:0,tdnDay=w?tdn/w*daily:0;
+ const reqDM=num($("reqDMI").value),reqCP=num($("reqCP").value),reqTDN=num($("reqTDN").value);
+ function ratio(s,r){return r>0?br(s/r*100)+"%": "Informe exigência"}
+ put("cmpDM",ratio(dmDay,reqDM));put("cmpCP",ratio(cpDay,reqCP));put("cmpTDN",ratio(tdnDay,reqTDN));
+ const items=[["CMS",dmDay,reqDM],["PB",cpDay,reqCP],["NDT",tdnDay,reqTDN]].filter(x=>x[2]>0);
+ if(!items.length){$("comparisonNote").textContent="Preencha as exigências de CMS, PB e NDT consultadas na planilha oficial BR-CORTE 2023. O fornecimento considera a quantidade diária de ração informada acima e a composição dos ingredientes cadastrados.";return}
+ const lines=items.map(([n,s,r])=>`${n}: ${s>=r?"atinge ou supera":"abaixo de"} a exigência (${br(s)} / ${br(r)} kg/dia)`);
+ $("comparisonNote").textContent=lines.join(" • ")+" . Comparação parcial: confira também energia, PDR/PNDR, minerais, fibra efetiva, água e adaptação.";
+}
+const oldCalculate=calculate;
+calculate=function(){oldCalculate();compareRequirements()};
+$("clearReq").addEventListener("click",()=>{["reqDMI","reqCP","reqTDN"].forEach(k=>$(k).value="");compareRequirements()});
+$("openBrcorte").addEventListener("click",()=>window.open("https://brcorte.com.br/assets/book2023/br/17.pdf","_blank"));
+["daily","reqDMI","reqCP","reqTDN","liveWeight","targetGain","animalType","systemType","refSource"].forEach(k=>$(k).addEventListener("input",compareRequirements));
+
+if(!load())examples.forEach(addRow);calculate();
+
+// --- REGISTRO DO SERVICE WORKER E BOTÃO DE INSTALAÇÃO ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.error('Erro no SW:', err));
+  });
+}
+
+let deferredPrompt;
+const btnInstall = $('btnInstall');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  btnInstall.style.display = 'inline-block';
+});
+
+btnInstall.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') btnInstall.style.display = 'none';
+  deferredPrompt = null;
+});
+</script>
+</body></html>
